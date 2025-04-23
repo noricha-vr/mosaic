@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>画像モザイク加工ツール</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+        integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        /* 基本スタイルとTailwindでは難しいカスタムスタイル */
+        body {
+            font-family: 'Inter', sans-serif;
+            overscroll-behavior: none;
+        }
+
+        canvas {
+            touch-action: none;
+            cursor: crosshair;
+            display: block;
+        }
+
+        /* モダンなスライダーのスタイリング */
+        input[type="range"]::-webkit-slider-thumb {
+            @apply appearance-none w-5 h-5 bg-indigo-600 rounded-full cursor-pointer hover:bg-indigo-700 transition-colors duration-150;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            @apply w-5 h-5 bg-indigo-600 rounded-full cursor-pointer border-none hover:bg-indigo-700 transition-colors duration-150;
+        }
+
+        /* ドラッグオーバー時のスタイル */
+        .drag-over {
+            @apply border-indigo-500 border-dashed bg-indigo-50;
+        }
+
+        /* アイコンの基本サイズ (Font Awesome用に調整) */
+        .icon-fa {
+            @apply text-base;
+            /* Font Awesomeのサイズ調整 (text-sm, text-lgなども可) */
+        }
+
+        /* Canvasコンテナの最小高さ */
+        #canvasContainer {
+            min-height: 200px;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-5xl bg-white p-6 sm:p-8 rounded-xl shadow-xl">
+        <h1 class="text-3xl font-bold text-center mb-8 text-gray-800">画像モザイクツール</h1>
+
+        <div class="bg-white p-5 rounded-xl shadow-md mb-6 flex flex-wrap items-center gap-x-6 gap-y-4">
+            <div class="flex-grow min-w-[180px]">
+                <label for="brushSize" class="block text-sm font-medium text-gray-700 mb-1.5">ブラシサイズ: <span
+                        id="brushSizeValue" class="text-sm text-gray-600 ml-2 font-medium">10px</span></label>
+                <input type="range" id="brushSize" min="1" max="100" value="10"
+                    class="w-full h-2 bg-gray-200 rounded-full appearance-none cursor-pointer dark:bg-gray-700">
+            </div>
+
+            <div class="flex-grow min-w-[180px]">
+                <label for="granularity" class="block text-sm font-medium text-gray-700 mb-1.5">モザイク粒度: <span
+                        id="granularityValue" class="text-sm text-gray-600 ml-2 font-medium">5</span></label>
+                <input type="range" id="granularity" min="2" max="50" value="5"
+                    class="w-full h-2 bg-gray-200 rounded-full appearance-none cursor-pointer dark:bg-gray-700">
+            </div>
+
+            <div class="flex items-center gap-3 ml-auto">
+                <button id="undoButton" aria-label="元に戻す"
+                    class="flex items-center justify-center p-2.5 text-sm font-medium text-white bg-gray-500 rounded-lg shadow-sm hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-all duration-200 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-gray-400"
+                    disabled>
+                    <i class="fa-solid fa-rotate-left icon-fa"></i>
+                </button>
+                <button id="redoButton" aria-label="やり直す"
+                    class="flex items-center justify-center p-2.5 text-sm font-medium text-white bg-gray-500 rounded-lg shadow-sm hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-all duration-200 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-gray-400"
+                    disabled>
+                    <i class="fa-solid fa-rotate-right icon-fa"></i>
+                </button>
+                <button id="downloadButton" aria-label="ダウンロード"
+                    class="flex items-center justify-center p-2.5 text-sm font-medium text-white bg-emerald-600 rounded-lg shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all duration-200 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-gray-400"
+                    disabled>
+                    <i class="fa-solid fa-download icon-fa"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="canvasContainer"
+            class="relative w-full flex flex-col items-center justify-center bg-gray-50 p-4 rounded-lg border-2 border-gray-200 transition-colors duration-200">
+            <label id="imageLoaderLabel" for="imageLoader"
+                class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 inline-block px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 ease-in-out cursor-pointer whitespace-nowrap">
+                画像を選択
+            </label>
+            <input type="file" id="imageLoader" accept="image/*" class="hidden" />
+            <canvas id="imageCanvas" class="max-w-full h-auto rounded-lg shadow-md border border-gray-300"></canvas>
+            <p id="dropZoneText"
+                class="absolute top-1/2 left-1/2 transform -translate-x-1/2 translate-y-8 text-gray-400 text-sm mt-2 z-10">
+                または、画像をここにドラッグ＆ドロップ</p>
+        </div>
+
+        <p id="statusMessage" class="text-center text-gray-600 mt-5 text-sm">画像を選択してください。</p>
+
+        <p class="text-center text-xs text-gray-500 mt-4">※ 画像はサーバーにアップロードされません。すべての処理はブラウザ内で完結します。</p>
+
+    </div>
+
+    <script>
+        // JavaScript部分は変更なし
+        const imageLoader = document.getElementById('imageLoader');
+        const imageLoaderLabel = document.getElementById('imageLoaderLabel');
+        const canvas = document.getElementById('imageCanvas');
+        const canvasContainer = document.getElementById('canvasContainer');
+        const dropZoneText = document.getElementById('dropZoneText');
+        let ctx = null;
+        const brushSizeSlider = document.getElementById('brushSize');
+        const brushSizeValue = document.getElementById('brushSizeValue');
+        const granularitySlider = document.getElementById('granularity');
+        const granularityValue = document.getElementById('granularityValue');
+        const undoButton = document.getElementById('undoButton');
+        const redoButton = document.getElementById('redoButton');
+        const downloadButton = document.getElementById('downloadButton');
+        const statusMessage = document.getElementById('statusMessage');
+
+        let isDrawing = false;
+        let currentBrushSize = 10;
+        let currentGranularity = 5;
+        let originalImage = null;
+        let history = [];
+        let historyIndex = -1;
+        const MAX_HISTORY = 20;
+
+        // --- Initialization ---
+        brushSizeSlider.addEventListener('input', (e) => {
+            currentBrushSize = parseInt(e.target.value, 10);
+            brushSizeValue.textContent = currentBrushSize + 'px';
+        });
+        granularitySlider.addEventListener('input', (e) => {
+            currentGranularity = parseInt(e.target.value, 10);
+            granularityValue.textContent = currentGranularity;
+        });
+        imageLoader.addEventListener('change', handleFileSelect);
+        downloadButton.addEventListener('click', downloadImage);
+        undoButton.addEventListener('click', undo);
+        redoButton.addEventListener('click', redo);
+
+        // --- Drag and Drop Event Listeners ---
+        canvasContainer.addEventListener('dragenter', handleDragEnter, false);
+        canvasContainer.addEventListener('dragover', handleDragOver, false);
+        canvasContainer.addEventListener('dragleave', handleDragLeave, false);
+        canvasContainer.addEventListener('drop', handleDrop, false);
+
+        // --- Canvas Drawing Event Listeners ---
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+        canvas.addEventListener('touchend', stopDrawing);
+        canvas.addEventListener('touchcancel', stopDrawing);
+
+        // --- Drag and Drop Handlers ---
+        function handleDragEnter(e) {
+            preventDefaults(e);
+            if (!originalImage) {
+                canvasContainer.classList.add('drag-over');
+            }
+        }
+        function handleDragOver(e) {
+            preventDefaults(e);
+            if (!originalImage) {
+                canvasContainer.classList.add('drag-over');
+                e.dataTransfer.dropEffect = 'copy';
+            } else {
+                e.dataTransfer.dropEffect = 'none';
+            }
+        }
+        function handleDragLeave(e) {
+            preventDefaults(e);
+            if (!canvasContainer.contains(e.relatedTarget)) {
+                canvasContainer.classList.remove('drag-over');
+            }
+        }
+        function handleDrop(e) {
+            preventDefaults(e);
+            canvasContainer.classList.remove('drag-over');
+            if (!originalImage) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                if (files.length === 1) {
+                    handleImageFile(files[0]);
+                } else if (files.length > 1) {
+                    statusMessage.textContent = '一度にアップロードできる画像は1つだけです。';
+                } else {
+                    statusMessage.textContent = '画像ファイルをドラッグ＆ドロップしてください。';
+                }
+            }
+        }
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // --- File Handling ---
+        function handleFileSelect(e) {
+            if (!originalImage) {
+                const files = e.target.files;
+                if (files.length > 0) {
+                    handleImageFile(files[0]);
+                }
+            }
+            e.target.value = null;
+        }
+        function handleImageFile(file) {
+            if (!file || !file.type.startsWith('image/')) {
+                statusMessage.textContent = '画像ファイルを選択またはドラッグ＆ドロップしてください。';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                originalImage = new Image();
+                originalImage.onload = function () {
+                    ctx = canvas.getContext('2d', { willReadFrequently: true });
+                    if (!ctx) {
+                        statusMessage.textContent = 'Canvasの初期化に失敗しました。';
+                        originalImage = null;
+                        return;
+                    }
+                    imageLoaderLabel.classList.add('hidden');
+                    dropZoneText.classList.add('hidden');
+                    canvas.classList.remove('hidden');
+                    canvas.style.border = '';
+                    const canvasContainer = canvas.parentElement;
+                    const containerStyle = window.getComputedStyle(canvasContainer);
+                    const containerPaddingX = parseFloat(containerStyle.paddingLeft) + parseFloat(containerStyle.paddingRight);
+                    const maxCanvasWidth = canvasContainer.clientWidth - containerPaddingX;
+                    let drawWidth = originalImage.width;
+                    let drawHeight = originalImage.height;
+                    if (drawWidth > maxCanvasWidth) {
+                        const scale = maxCanvasWidth / drawWidth;
+                        drawWidth = maxCanvasWidth;
+                        drawHeight = originalImage.height * scale;
+                    }
+                    canvas.width = drawWidth;
+                    canvas.height = drawHeight;
+                    ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
+                    statusMessage.textContent = '画像上をドラッグしてモザイクをかけてください。';
+                    clearHistory();
+                    saveHistory();
+                    updateButtonStates();
+                }
+                originalImage.onerror = function () {
+                    statusMessage.textContent = '画像の読み込みに失敗しました。';
+                    clearCanvasAndHistory();
+                }
+                originalImage.src = event.target.result;
+            }
+            reader.onerror = function () {
+                statusMessage.textContent = 'ファイルの読み込みに失敗しました。';
+                clearCanvasAndHistory();
+            }
+            reader.readAsDataURL(file);
+        }
+
+        // --- Drawing Logic ---
+        function startDrawing(e) {
+            if (!ctx || !originalImage) return;
+            isDrawing = true;
+            draw(e);
+        }
+        function draw(e) {
+            if (!isDrawing || !ctx || !originalImage) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            let x, y;
+            if (e.touches && e.touches[0]) {
+                x = (e.touches[0].clientX - rect.left) * scaleX;
+                y = (e.touches[0].clientY - rect.top) * scaleY;
+            } else {
+                x = (e.clientX - rect.left) * scaleX;
+                y = (e.clientY - rect.top) * scaleY;
+            }
+            x = Math.max(0, Math.min(canvas.width, x));
+            y = Math.max(0, Math.min(canvas.height, y));
+            applyMosaic(x, y);
+        }
+        function stopDrawing() {
+            if (!isDrawing) return;
+            isDrawing = false;
+            if (ctx && originalImage) {
+                saveHistory();
+            }
+        }
+
+        // --- Touch Event Handlers ---
+        function handleTouchStart(e) {
+            if (!ctx || !originalImage) return;
+            e.preventDefault();
+            startDrawing(e);
+        }
+        function handleTouchMove(e) {
+            if (!isDrawing || !ctx || !originalImage) return;
+            e.preventDefault();
+            draw(e);
+        }
+
+        // --- Mosaic Effect ---
+        function applyMosaic(x, y) {
+            if (!ctx) return;
+            const brushRadius = currentBrushSize / 2;
+            const startX = Math.max(0, Math.floor(x - brushRadius));
+            const startY = Math.max(0, Math.floor(y - brushRadius));
+            const endX = Math.min(canvas.width, Math.ceil(x + brushRadius));
+            const endY = Math.min(canvas.height, Math.ceil(y + brushRadius));
+            const processWidth = endX - startX;
+            const processHeight = endY - startY;
+            if (processWidth <= 0 || processHeight <= 0) return;
+            const mosaicBlockSize = Math.max(2, currentGranularity);
+            try {
+                const imageData = ctx.getImageData(startX, startY, processWidth, processHeight);
+                const data = imageData.data;
+                for (let blockY = 0; blockY < processHeight; blockY += mosaicBlockSize) {
+                    for (let blockX = 0; blockX < processWidth; blockX += mosaicBlockSize) {
+                        let r = 0, g = 0, b = 0, a = 0;
+                        let pixelCount = 0;
+                        const blockActualEndX = Math.min(processWidth, blockX + mosaicBlockSize);
+                        const blockActualEndY = Math.min(processHeight, blockY + mosaicBlockSize);
+                        for (let py = blockY; py < blockActualEndY; py++) {
+                            for (let px = blockX; px < blockActualEndX; px++) {
+                                const index = (py * processWidth + px) * 4;
+                                if (data[index + 3] > 0) {
+                                    r += data[index];
+                                    g += data[index + 1];
+                                    b += data[index + 2];
+                                    a += data[index + 3];
+                                    pixelCount++;
+                                }
+                            }
+                        }
+                        if (pixelCount > 0) {
+                            const avgR = Math.round(r / pixelCount);
+                            const avgG = Math.round(g / pixelCount);
+                            const avgB = Math.round(b / pixelCount);
+                            const avgA = 255;
+                            for (let py = blockY; py < blockActualEndY; py++) {
+                                for (let px = blockX; px < blockActualEndX; px++) {
+                                    const index = (py * processWidth + px) * 4;
+                                    data[index] = avgR;
+                                    data[index + 1] = avgG;
+                                    data[index + 2] = avgB;
+                                    data[index + 3] = avgA;
+                                }
+                            }
+                        }
+                    }
+                }
+                ctx.putImageData(imageData, startX, startY);
+            } catch (error) {
+                console.error("Error applying mosaic:", error);
+            }
+        }
+
+        // --- History (Undo/Redo) ---
+        function saveHistory() {
+            if (!ctx || !originalImage) return;
+            history = history.slice(0, historyIndex + 1);
+            try {
+                const currentState = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                history.push(currentState);
+                if (history.length > MAX_HISTORY) {
+                    history.shift();
+                } else {
+                    historyIndex++;
+                }
+                updateButtonStates();
+            } catch (error) {
+                console.error("Error saving history:", error);
+            }
+        }
+        function undo() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                redrawCanvasFromHistory();
+                updateButtonStates();
+            }
+        }
+        function redo() {
+            if (historyIndex < history.length - 1) {
+                historyIndex++;
+                redrawCanvasFromHistory();
+                updateButtonStates();
+            }
+        }
+        function redrawCanvasFromHistory() {
+            if (!ctx || historyIndex < 0 || historyIndex >= history.length) return;
+            try {
+                ctx.putImageData(history[historyIndex], 0, 0);
+            } catch (error) {
+                console.error("Error redrawing from history:", error);
+            }
+        }
+        function updateButtonStates() {
+            if (undoButton) undoButton.disabled = historyIndex <= 0;
+            if (redoButton) redoButton.disabled = historyIndex >= history.length - 1;
+            if (downloadButton) downloadButton.disabled = !originalImage;
+        }
+        function clearHistory() {
+            history = [];
+            historyIndex = -1;
+        }
+
+        // --- Clear Canvas and Reset ---
+        function clearCanvasAndHistory() {
+            if (ctx) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+            canvas.width = 0;
+            canvas.height = 0;
+            canvas.classList.add('hidden');
+            canvas.style.border = 'none';
+            originalImage = null;
+            ctx = null;
+            clearHistory();
+            updateButtonStates();
+            imageLoaderLabel.classList.remove('hidden');
+            dropZoneText.classList.remove('hidden');
+            canvasContainer.classList.remove('drag-over');
+            statusMessage.textContent = '画像を選択してください。';
+        }
+
+        // --- Download ---
+        function downloadImage() {
+            if (!originalImage || !ctx) {
+                console.error("Download error: No image loaded or context not available.");
+                statusMessage.textContent = 'ダウンロードする画像がありません。';
+                return;
+            }
+            const link = document.createElement('a');
+            link.download = 'mosaic_image.png';
+            try {
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                const originalStatus = statusMessage.textContent;
+                statusMessage.textContent = '画像をダウンロードしました。';
+                setTimeout(() => {
+                    if (originalImage) {
+                        statusMessage.textContent = '画像上をドラッグしてモザイクをかけてください。';
+                    } else {
+                        statusMessage.textContent = '画像を選択してください。';
+                    }
+                }, 3000);
+            } catch (error) {
+                console.error("Error generating data URL or triggering download:", error);
+                statusMessage.textContent = 'ダウンロード中にエラーが発生しました。コンソールを確認してください。';
+                if (error.name === 'SecurityError') {
+                    statusMessage.textContent = 'ダウンロードエラー: Canvasが汚染されている可能性があります。(クロスオリジン画像?)';
+                }
+            }
+        }
+
+        // --- Initial Setup ---
+        function initializeApp() {
+            canvas.classList.add('hidden');
+            canvas.width = 0;
+            canvas.height = 0;
+            imageLoaderLabel.classList.remove('hidden');
+            dropZoneText.classList.remove('hidden');
+            updateButtonStates();
+        }
+
+        initializeApp();
+
+    </script>
+
+</body>
+
+</html>
