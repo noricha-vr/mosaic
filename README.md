@@ -2,6 +2,8 @@
 
 [![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/noricha-vr/mosaic)
 
+**公開URL:** [https://mosaic.kojin.works/](https://mosaic.kojin.works/)
+
 ## 概要
 
 ブラウザ上で動作するシンプルな画像モザイク加工ツールです。ローカルの画像ファイルを読み込み、マウスやタッチ操作で直感的に指定した範囲にモザイクを適用することができます。
@@ -52,3 +54,27 @@
 ## 実行方法
 
 `index.html` ファイルをお使いのウェブブラウザで開くだけで利用できます。サーバーサイドの処理や特別なビルド手順は不要です。
+
+## デプロイ方法 (Cloudflare Pages)
+
+このプロジェクトは Cloudflare Pages にデプロイできます。
+
+1.  **Wrangler CLI のインストール (未導入の場合):**
+    ```bash
+    npm install -g wrangler
+    # または yarn global add wrangler
+    ```
+2.  **Cloudflare アカウントへのログイン:**
+    ```bash
+    wrangler login
+    ```
+    ブラウザが開き、認証を求められます。
+3.  **デプロイ:**
+    プロジェクトのルートディレクトリで以下のコマンドを実行します。
+    ```bash
+    wrangler pages deploy . --project-name mosaic
+    ```
+    -   `.` はデプロイするディレクトリ（現在のディレクトリ）を指定します。
+    -   `--project-name mosaic` で Cloudflare Pages 上のプロジェクト名を指定します。初回デプロイ時にこの名前でプロジェクトが作成されます（存在しない場合）。
+
+    **注意:** GitHub リポジトリと連携している場合、指定したブランチ (例: `main`) への `git push` で自動的にデプロイが実行されます。手動での `wrangler pages deploy` は通常不要になります。
