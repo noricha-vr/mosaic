@@ -470,6 +470,13 @@
 
         // --- Download ---
         function downloadImage() {
+            // ★ GA イベント送信
+            if (typeof gtag === 'function') {
+                gtag('event', 'download_image');
+            } else {
+                console.warn('gtag function not found. Ensure Google Analytics is loaded.');
+            }
+
             if (!originalImage || !ctx) {
                 console.error("Download error: No image loaded or context not available.");
                 statusMessage.textContent = 'ダウンロードする画像がありません。';
