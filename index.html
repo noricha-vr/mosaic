@@ -20,13 +20,13 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://mosaic.kojin.works/"> <!-- ★ 要確認: 正しい公開URLに変更してください -->
     <meta property="og:site_name" content="画像モザイク加工ツール">
-    <meta property="og:image" content="https://raw.githubusercontent.com/noricha-vr/mosaic/refs/heads/main/images/image.png"> <!-- ★ プレビュー画像を設定 -->
+    <meta property="og:image" content="https://mosaic.kojin.works/images/image.png"> <!-- ★ プレビュー画像URLを変更 -->
 
     <!-- Twitter Card Meta Tags -->
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="画像モザイク加工ツール - ブラウザで簡単・安全に加工">
     <meta name="twitter:description" content="インストール不要！ブラウザ上でドラッグするだけで画像にモザイクをかけられる無料ツールです。プライバシー保護にも。">
-    <meta name="twitter:image" content="https://raw.githubusercontent.com/noricha-vr/mosaic/refs/heads/main/images/image.png"> <!-- ★ プレビュー画像を設定 -->
+    <meta name="twitter:image" content="https://mosaic.kojin.works/images/image.png"> <!-- ★ プレビュー画像URLを変更 -->
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
@@ -73,6 +73,17 @@
             min-height: 400px;
         }
     </style>
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VRE36M03VX"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-VRE36M03VX');
+    </script>
+
 </head>
 
 <body class="bg-gray-50 flex flex-col items-center justify-center min-h-screen p-4">
