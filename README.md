@@ -4,6 +4,8 @@
 
 **公開URL:** [https://mosaic.kojin.works/](https://mosaic.kojin.works/)
 
+![alt text](images/mosaic.png)
+
 ## 概要
 
 ブラウザ上で動作するシンプルな画像モザイク加工ツールです。ローカルの画像ファイルを読み込み、マウスやタッチ操作で直感的に指定した範囲にモザイクを適用することができます。
